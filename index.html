@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تحدي الأساطير - نسخة الموبايل برو</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a; --bg-darker: #020617; --primary: #10b981; --primary-glow: rgba(16, 185, 129, 0.5);
+            --gold: #fbbf24; --gold-glow: rgba(251, 191, 36, 0.4); --text-main: #f8fafc; --text-muted: #94a3b8;
+            --card-bg: linear-gradient(145deg, #1e293b 0%, #0f172a 100%); --glass-bg: rgba(15, 23, 42, 0.7);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            color: var(--text-main); margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            -webkit-font-smoothing: antialiased; user-select: none;
+        }
+
+        @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes slideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        @keyframes pulse { 0% { box-shadow: 0 0 10px var(--primary-glow); } 50% { box-shadow: 0 0 20px var(--primary-glow); } 100% { box-shadow: 0 0 10px var(--primary-glow); } }
+
+        .modal-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px; box-sizing: border-box; text-align: center;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px; padding: 30px 20px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            max-width: 340px; width: 100%; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .main-title {
+            font-size: 2.2rem; font-weight: 900; background: linear-gradient(135deg, #ffd700 0%, #f59e0b 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 5px;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 15px; margin: 25px 0; }
+        .styled-input {
+            background: rgba(0, 0, 0, 0.4); border: 2px solid rgba(255, 255, 255, 0.1); color: #fff;
+            padding: 15px; border-radius: 12px; font-size: 1rem; font-weight: bold; text-align: center;
+            outline: none; transition: 0.3s; width: 100%; box-sizing: border-box;
+        }
+        .styled-input:focus { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); }
+        .styled-input::placeholder { color: rgba(255, 255, 255, 0.3); font-weight: normal; }
+
+        .action-btn { 
+            background: var(--primary); color: #fff; font-size: 1.1rem; font-weight: 900; 
+            padding: 16px; border: none; border-radius: 12px; cursor: pointer; width: 100%;
+            box-shadow: 0 5px 15px var(--primary-glow); transition: all 0.2s ease;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .action-btn:active { transform: scale(0.96); }
+        .btn-gold { background: linear-gradient(135deg, #fbbf24, #d97706); box-shadow: 0 5px 15px var(--gold-glow); color: #000; }
+
+        .player-zone { flex: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; padding: 10px; box-sizing: border-box; }
+        #zone-p1 { transform: rotate(180deg); border-bottom: 2px solid rgba(255, 255, 255, 0.05); }
+
+        .waiting-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--glass-bg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            z-index: 10; padding: 10px; box-sizing: border-box;
+        }
+        .overlay-title { color: var(--gold); font-size: 0.85rem; font-weight: 800; margin-bottom: 10px; letter-spacing: 0.5px; }
+
+        .pitch {
+            width: 100%; max-width: 340px; height: 180px; background: #064e3b; 
+            border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 16px; position: relative; overflow: hidden; 
+            display: flex; flex-direction: column; justify-content: space-between; padding: 8px 4px; box-sizing: border-box; 
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
+        }
+        .pitch::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; border-top: 2px solid rgba(255, 255, 255, 0.15); transform: translateY(-50%); }
+        .pitch::after { content: ''; position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; border: 2px solid rgba(255, 255, 255, 0.15); border-radius: 50%; transform: translate(-50%, -50%); }
+        
+        .pitch-row { display: flex; justify-content: space-around; width: 100%; z-index: 2; }
+        .pitch-player-slot {
+            width: 48px; height: 34px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); 
+            border: 1px dashed rgba(255, 255, 255, 0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 0.6rem; color: rgba(255, 255, 255, 0.6); font-weight: bold; overflow: hidden; transition: 0.3s;
+        }
+        .pitch-player-slot.filled { background: linear-gradient(135deg, #fbbf24, #d97706); color: #000; border: none; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
+        .pitch-player-slot.captain-slot { box-shadow: 0 0 15px var(--gold); border: 2px solid #fff; }
+        .pitch-player-slot .p-name { font-size: 0.55rem; font-weight: 900; white-space: nowrap; max-width: 44px; overflow: hidden; text-overflow: ellipsis; }
+        .pitch-player-slot .p-rat { font-size: 0.55rem; background: rgba(0,0,0,0.8); color: var(--gold); padding: 1px 4px; border-radius: 4px; margin-top: 2px; }
+
+        .zone-header {
+            display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 340px; 
+            background: rgba(0, 0, 0, 0.3); padding: 10px 15px; border-radius: 12px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 5px;
+        }
+        .player-info h3 { margin: 0; font-size: 1rem; color: var(--text-main); font-weight: 800; transition: 0.3s;}
+        .player-info h3.active-turn { color: var(--primary); text-shadow: 0 0 10px var(--primary-glow); }
+        .stats-summary { font-size: 0.75rem; color: var(--text-muted); font-weight: 600;}
+        .stats-summary span { color: #fff; font-weight: 900; font-size: 0.9rem;}
+
+        .card-container { width: 140px; height: 195px; margin: auto 0; position: relative; animation: slideUp 0.3s ease-out; }
+        .fut-card {
+            background: var(--card-bg); width: 100%; height: 100%; display: flex; flex-direction: column; padding: 12px;
+            box-sizing: border-box; position: relative; clip-path: polygon(10% 0, 90% 0, 100% 10%, 100% 80%, 50% 100%, 0 80%, 0 10%);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.8); border-radius: 4px;
+        }
+        .fut-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(145deg, #fbbf24 0%, #b45309 50%, #fcd34d 100%); z-index: -2; }
+        .fut-card::before { content: ''; position: absolute; top: 2px; left: 2px; right: 2px; bottom: 2px; background: var(--card-bg); z-index: -1; clip-path: polygon(10% 0, 90% 0, 100% 10%, 100% 80%, 50% 100%, 0 80%, 0 10%); }
+
+        .card-top { display: flex; justify-content: space-between; align-items: flex-start; z-index: 2; border-bottom: 1px solid rgba(251, 191, 36, 0.3); padding-bottom: 5px; margin-bottom: 5px; direction: ltr;}
+        .card-rating { font-size: 1.8rem; font-weight: 900; color: var(--gold); line-height: 1; }
+        .card-position { font-size: 0.7rem; font-weight: 800; color: #fff; text-align: center; }
+        .nc-badge { width: 18px; height: 14px; background: rgba(255,255,255,0.2); border-radius: 3px; font-size: 0.5rem; display:flex; justify-content:center; align-items:center; color:#fff; margin-bottom: 3px;}
+
+        .player-avatar { font-size: 3rem; text-align: center; margin: auto 0; text-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 2; }
+        .card-info { text-align: center; z-index: 2; margin-top: auto;}
+        .card-name { font-size: 0.9rem; font-weight: 900; color: var(--gold); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid rgba(251, 191, 36, 0.2); padding-bottom: 4px; margin-bottom: 4px; direction: ltr;}
+        .card-meta { font-size: 0.6rem; color: #cbd5e1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .btn-group { display: flex; gap: 10px; width: 100%; max-width: 340px; margin-top: 5px; }
+        .btn-group button { padding: 12px; font-size: 0.85rem; font-weight: 800; border: none; border-radius: 10px; cursor: pointer; flex: 1; transition: 0.2s; }
+        .btn-group button:active { transform: scale(0.95); }
+        .btn-accept { background: var(--primary); color: white; box-shadow: 0 4px 10px var(--primary-glow); }
+        .btn-reject { background: rgba(255,255,255,0.08); color: white; border: 1px solid rgba(255,255,255,0.15); }
+
+        .reveal-box { font-size: 0.75rem; font-weight: 800; text-align: center; padding: 8px; border-radius: 8px; width: 100%; max-width: 340px; margin-bottom: 5px; animation: popIn 0.3s; }
+        .box-good { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; }
+        .box-bad { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; }
+
+        .captain-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; width: 100%; margin: 20px 0; }
+        .captain-opt { 
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); padding: 12px 15px; border-radius: 12px; font-size: 0.85rem; font-weight: 800; cursor: pointer; color: #fff; transition: 0.2s; width: calc(50% - 6px); box-sizing: border-box;
+        }
+        .captain-opt:active { transform: scale(0.95); background: var(--gold); color: #000; }
+
+        /* تعديلات واجهة المباراة للإصلاح */
+        #match-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); z-index: 20; display: none; flex-direction: column; padding: 20px 15px; box-sizing: border-box;
+        }
+        .scoreboard {
+            display: flex; align-items: center; justify-content: space-between; 
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 15px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative;
+        }
+        .scoreboard-team { font-size: 0.9rem; font-weight: 900; width: 30%; text-align: center; word-wrap: break-word; }
+        .scoreboard-team.p1 { color: #60a5fa; }
+        .scoreboard-team.p2 { color: #f472b6; }
+        .scoreboard-score { font-size: 2.2rem; font-weight: 900; color: #fff; background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 12px; text-align: center; letter-spacing: 2px; text-shadow: 0 2px 10px rgba(255,255,255,0.2); }
+        .match-timer { position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #000; font-size: 0.75rem; font-weight: 900; padding: 4px 15px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); animation: pulse 2s infinite;}
+
+        .domination-wrapper { width: 100%; max-width: 360px; margin: 10px auto 15px auto; text-align: center; }
+        .domination-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 800; }
+        .domination-bar { width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; display: flex; box-shadow: inset 0 2px 5px rgba(0,0,0,0.6); }
+        #dom-p1 { width: 50%; background: linear-gradient(90deg, #2563eb, #60a5fa); transition: width 0.3s ease; }
+        #dom-p2 { width: 50%; background: linear-gradient(90deg, #f472b6, #db2777); transition: width 0.3s ease; }
+
+        /* إصلاح صندوق الأحداث (التمرير السلس) */
+        .match-log-box { 
+            flex: 1; min-height: 0; /* هذا السطر يمنع الصندوق من تجاوز الشاشة */
+            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; overflow-y: auto; font-size: 0.85rem; line-height: 1.8; text-align: right; margin-bottom: 15px; 
+        }
+        .log-line { padding: 8px 12px; border-radius: 10px; margin-bottom: 10px; background: rgba(255,255,255,0.03); border-right: 4px solid transparent; animation: slideUp 0.3s ease-out; }
+        .log-line.goal { background: rgba(16, 185, 129, 0.15); border-right-color: var(--primary); color: #6ee7b7; font-weight: 800; }
+        .log-line.system { color: var(--gold); font-size: 0.8rem; font-weight: 800; opacity: 0.9; }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; margin: 20px 0; }
+        .stat-box { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; text-align: center;}
+        .stat-title { font-size: 0.7rem; color: var(--text-muted); font-weight: bold; margin-bottom: 5px;}
+        .stat-val { font-size: 1.2rem; font-weight: 900; color: #fff;}
+        .stat-val.p1-color { color: #60a5fa; }
+        .stat-val.p2-color { color: #f472b6; }
+        
+        .motm-box { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(217, 119, 6, 0.2)); border: 1px solid var(--gold); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 15px;}
+        .motm-icon { font-size: 2.5rem; }
+        .motm-info { text-align: right; }
+        .motm-info h4 { margin: 0; color: var(--gold); font-size: 0.8rem; text-transform: uppercase;}
+        .motm-info h2 { margin: 5px 0 0 0; font-size: 1.2rem; font-weight: 900; color: #fff;}
+
+    </style>
+</head>
+<body>
+
+    <div id="start-screen" class="modal-screen">
+        <div class="glass-panel">
+            <div class="main-title">تحدي الأساطير</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; font-weight: 600;">نسخة الموبايل الاحترافية</div>
+            <div class="input-group">
+                <input type="text" id="input-p1-name" class="styled-input" placeholder="اسم اللاعب الأول (أزرق)" maxlength="12">
+                <input type="text" id="input-p2-name" class="styled-input" placeholder="اسم اللاعب الثاني (وردي)" maxlength="12">
+            </div>
+            <button class="action-btn" onclick="initGameSession()">بدء المباراة ⚽</button>
+        </div>
+    </div>
+
+    <div id="captain-screen" class="modal-screen" style="display: none;">
+        <div class="glass-panel" style="max-width: 380px;">
+            <div class="main-title" id="cap-screen-title" style="font-size: 1.6rem;">اختر قائدك</div>
+            <div style="font-size:0.85rem; color:var(--text-muted); font-weight:bold;">القائد يحصل على +5 طاقة وهو حاسم في المباريات</div>
+            <div class="captain-grid" id="captain-options-box"></div>
+        </div>
+    </div>
+
+    <div id="stats-screen" class="modal-screen" style="display: none;">
+        <div class="glass-panel" style="max-width: 380px;">
+            <div class="main-title" style="font-size: 1.8rem; margin-bottom: 15px;">نهاية المباراة</div>
+            <div class="motm-box">
+                <div class="motm-icon">🏆</div>
+                <div class="motm-info">
+                    <h4>رجل المباراة (MOTM)</h4>
+                    <h2 id="motm-name">--</h2>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-box"><div class="stat-title" id="stat-name-p1">اللاعب 1</div><div class="stat-val p1-color" id="stat-shots-p1">0</div><div class="stat-title" style="margin-top:5px;">تسديدات</div></div>
+                <div class="stat-box"><div class="stat-title" id="stat-name-p2">اللاعب 2</div><div class="stat-val p2-color" id="stat-shots-p2">0</div><div class="stat-title" style="margin-top:5px;">تسديدات</div></div>
+                <div class="stat-box"><div class="stat-val p1-color" id="stat-pass-p1">0%</div><div class="stat-title" style="margin-top:5px;">دقة التمرير</div></div>
+                <div class="stat-box"><div class="stat-val p2-color" id="stat-pass-p2">0%</div><div class="stat-title" style="margin-top:5px;">دقة التمرير</div></div>
+            </div>
+            <button class="action-btn btn-gold" onclick="resetGame()">مواجهة جديدة 🔄</button>
+        </div>
+    </div>
+
+    <div class="player-zone" id="zone-p1">
+        <div class="waiting-overlay" id="overlay-p1"><div class="overlay-title" id="overlay-title-p1">--</div>
+            <div class="pitch" id="pitch-p1">
+                <div class="pitch-row"><div class="pitch-player-slot" id="p1-slot-0">LW</div><div class="pitch-player-slot" id="p1-slot-1">ST</div><div class="pitch-player-slot" id="p1-slot-2">RW</div></div>
+                <div class="pitch-row"><div class="pitch-player-slot" id="p1-slot-3">LM</div><div class="pitch-player-slot" id="p1-slot-4">CM</div><div class="pitch-player-slot" id="p1-slot-5">CM</div><div class="pitch-player-slot" id="p1-slot-6">RM</div></div>
+                <div class="pitch-row"><div class="pitch-player-slot" id="p1-slot-7">CB</div><div class="pitch-player-slot" id="p1-slot-8">CB</div><div class="pitch-player-slot" id="p1-slot-9">CB</div></div>
+                <div class="pitch-row"><div class="pitch-player-slot" id="p1-slot-10">GK</div></div>
+            </div>
+        </div>
+        
+        <div class="zone-header">
+            <div class="player-info"><h3 id="title-p1">--</h3></div>
+            <div class="stats-summary">إجمالي: <span id="score-p1">0</span> | تناغم: <span id="chem-p1">0</span></div>
+        </div>
+
+        <div class="card-container">
+            <div class="fut-card">
+                <div class="card-top"><div style="display: flex; flex-direction: column; align-items: center;"><div class="card-rating" id="rating-p1">--</div><div class="card-position" id="pos-p1">--</div></div><div style="display: flex; flex-direction: column; gap: 3px;"><div class="nc-badge">🌍</div><div class="nc-badge">🛡️</div></div></div>
+                <div class="player-avatar">👤</div>
+                <div class="card-info"><div class="card-name" id="name-p1">--</div><div class="card-meta" id="meta-p1">--</div></div>
+            </div>
+        </div>
+
+        <div class="reveal-box" id="reveal-p1" style="display:none;"></div>
+        <div class="btn-group"><button class="btn-accept" id="accept-p1" onclick="acceptPlayer()">تأكيد ✅</button><button class="btn-reject" id="reject-p1" onclick="rejectPlayer()">تغيير 🎲</button></div>
+    </div>
+
+    <div class="player-zone" id="zone-p2">
+        <div class="waiting-overlay" id="overlay-p2"><div class="overlay-title" id="overlay-title-p2">--</div>
+            <div class="pitch" id="pitch-p2">
+                <div class="pitch-row"><div class="pitch-player-slot" id="p2-slot-0">LW</div><div class="pitch-player-slot" id="p2-slot-1">ST</div><div class="pitch-player-slot" id="p2-slot-2">RW</div></div>
+                <div class="pitch-row"><div class="pitch-player-slot" id="p2-slot-3">LM</div><div class="pitch-player-slot" id="p2-slot-4">CM</div><div class="pitch-player-slot" id="p2-slot-5">CM</div><div class="pitch-player-slot" id="p2-slot-6">RM</div></div>
+                <div class="pitch-row"><div class="pitch-player-slot" id="p2-slot-7">CB</div><div class="pitch-player-slot" id="p2-slot-8">CB</div><div class="pitch-player-slot" id="p2-slot-9">CB</div></div>
+                <div class="pitch-row"><div class="pitch-player-slot" id="p2-slot-10">GK</div></div>
+            </div>
+        </div>
+
+        <div class="zone-header">
+            <div class="player-info"><h3 id="title-p2">--</h3></div>
+            <div class="stats-summary">إجمالي: <span id="score-p2">0</span> | تناغم: <span id="chem-p2">0</span></div>
+        </div>
+
+        <div class="card-container">
+            <div class="fut-card">
+                <div class="card-top"><div style="display: flex; flex-direction: column; align-items: center;"><div class="card-rating" id="rating-p2">--</div><div class="card-position" id="pos-p2">--</div></div><div style="display: flex; flex-direction: column; gap: 3px;"><div class="nc-badge">🌍</div><div class="nc-badge">🛡️</div></div></div>
+                <div class="player-avatar">👤</div>
+                <div class="card-info"><div class="card-name" id="name-p2">--</div><div class="card-meta" id="meta-p2">--</div></div>
+            </div>
+        </div>
+
+        <div class="reveal-box" id="reveal-p2" style="display:none;"></div>
+        <div class="btn-group"><button class="btn-accept" id="accept-p2" onclick="acceptPlayer()">تأكيد ✅</button><button class="btn-reject" id="reject-p2" onclick="rejectPlayer()">تغيير 🎲</button></div>
+    </div>
+
+    <div id="match-screen">
+        <div class="scoreboard">
+            <div class="scoreboard-team p1" id="score-name-p1">--</div>
+            <div class="scoreboard-score" id="live-score">0 - 0</div>
+            <div class="scoreboard-team p2" id="score-name-p2">--</div>
+            <div class="match-timer" id="live-timer">د '0</div>
+        </div>
+        <div class="domination-wrapper">
+            <div class="domination-label" id="dom-text">الاستحواذ: 50% - 50%</div>
+            <div class="domination-bar"><div id="dom-p1"></div><div id="dom-p2"></div></div>
+        </div>
+        <div class="match-log-box" id="match-events-log"></div>
+    </div>
+
+    <script>
+        window.onload = () => {
+            const savedP1 = localStorage.getItem('p1Name');
+            const savedP2 = localStorage.getItem('p2Name');
+            if(savedP1) document.getElementById('input-p1-name').value = savedP1;
+            if(savedP2) document.getElementById('input-p2-name').value = savedP2;
+        };
+
+        // تم إضافة أسماء كثيرة جداً لمنع أي تكرار أو خطأ عند استخدام زر الرفض
+        const playersDatabase = {
+            "GK": [{ name: "Yashin", rating: 94, club: "Dynamo", nation: "Russia" }, { name: "Casillas", rating: 92, club: "Real Madrid", nation: "Spain" }, { name: "Courtois", rating: 90, club: "Real Madrid", nation: "Belgium" }, { name: "Alisson", rating: 89, club: "Liverpool", nation: "Brazil" }, { name: "Ter Stegen", rating: 89, club: "Barcelona", nation: "Germany" }, { name: "Bounou", rating: 86, club: "Al Hilal", nation: "Morocco" }, { name: "Ederson", rating: 88, club: "Man City", nation: "Brazil" }, { name: "Oblak", rating: 89, club: "Atletico", nation: "Slovenia" }, { name: "Donnarumma", rating: 87, club: "PSG", nation: "Italy" }],
+            "CB": [{ name: "Maldini", rating: 94, club: "Milan", nation: "Italy" }, { name: "Nesta", rating: 92, club: "Milan", nation: "Italy" }, { name: "Van Dijk", rating: 91, club: "Liverpool", nation: "Netherlands" }, { name: "Ramos", rating: 89, club: "Sevilla", nation: "Spain" }, { name: "Rüdiger", rating: 88, club: "Real Madrid", nation: "Germany" }, { name: "Saliba", rating: 87, club: "Arsenal", nation: "France" }, { name: "Araujo", rating: 86, club: "Barcelona", nation: "Uruguay" }, { name: "Dias", rating: 89, club: "Man City", nation: "Portugal" }, { name: "Marquinhos", rating: 87, club: "PSG", nation: "Brazil" }, { name: "Kompany", rating: 89, club: "Man City", nation: "Belgium" }, { name: "Puyol", rating: 90, club: "Barcelona", nation: "Spain" }, { name: "Koulibaly", rating: 85, club: "Al Hilal", nation: "Senegal" }, { name: "Militao", rating: 86, club: "Real Madrid", nation: "Brazil" }, { name: "Stones", rating: 85, club: "Man City", nation: "England" }],
+            "LM": [{ name: "Nedvěd", rating: 90, club: "Juventus", nation: "Italy" }, { name: "Neymar Jr", rating: 89, club: "Al Hilal", nation: "Brazil" }, { name: "Son", rating: 88, club: "Spurs", nation: "South Korea" }, { name: "Leao", rating: 87, club: "Milan", nation: "Portugal" }, { name: "Kvaratskhelia", rating: 86, club: "Napoli", nation: "Georgia" }, { name: "Grealish", rating: 85, club: "Man City", nation: "England" }, { name: "Rashford", rating: 84, club: "Man Utd", nation: "England" }],
+            "CM": [{ name: "Zidane", rating: 95, club: "Real Madrid", nation: "France" }, { name: "Xavi", rating: 93, club: "Barcelona", nation: "Spain" }, { name: "De Bruyne", rating: 91, club: "Man City", nation: "Belgium" }, { name: "Bellingham", rating: 90, club: "Real Madrid", nation: "England" }, { name: "Valverde", rating: 89, club: "Real Madrid", nation: "Uruguay" }, { name: "Pedri", rating: 87, club: "Barcelona", nation: "Spain" }, { name: "Kroos", rating: 90, club: "Real Madrid", nation: "Germany" }, { name: "Modric", rating: 91, club: "Real Madrid", nation: "Croatia" }, { name: "Kanté", rating: 88, club: "Al Ittihad", nation: "France" }, { name: "Iniesta", rating: 93, club: "Barcelona", nation: "Spain" }],
+            "RM": [{ name: "Figo", rating: 90, club: "Real Madrid", nation: "Portugal" }, { name: "Saka", rating: 88, club: "Arsenal", nation: "England" }, { name: "Rodrygo", rating: 87, club: "Real Madrid", nation: "Brazil" }, { name: "Mahrez", rating: 86, club: "Al Ahli", nation: "Algeria" }, { name: "Di Maria", rating: 87, club: "Benfica", nation: "Argentina" }, { name: "Dembele", rating: 85, club: "PSG", nation: "France" }, { name: "Bale", rating: 90, club: "Real Madrid", nation: "Wales" }],
+            "LW": [{ name: "Ronaldinho", rating: 94, club: "Barcelona", nation: "Brazil" }, { name: "Mbappé", rating: 92, club: "Real Madrid", nation: "France" }, { name: "Vinicius Jr", rating: 91, club: "Real Madrid", nation: "Brazil" }, { name: "Martinelli", rating: 85, club: "Arsenal", nation: "Brazil" }, { name: "Gakpo", rating: 84, club: "Liverpool", nation: "Netherlands" }, { name: "Diaz", rating: 85, club: "Liverpool", nation: "Colombia" }],
+            "ST": [{ name: "Pelé", rating: 96, club: "Santos", nation: "Brazil" }, { name: "Ronaldo R9", rating: 95, club: "Real Madrid", nation: "Brazil" }, { name: "Haaland", rating: 91, club: "Man City", nation: "Norway" }, { name: "CR7", rating: 90, club: "Al Nassr", nation: "Portugal" }, { name: "Lewandowski", rating: 89, club: "Barcelona", nation: "Poland" }, { name: "Kane", rating: 90, club: "Bayern", nation: "England" }, { name: "Benzema", rating: 89, club: "Al Ittihad", nation: "France" }],
+            "RW": [{ name: "Messi", rating: 95, club: "Inter Miami", nation: "Argentina" }, { name: "Salah", rating: 91, club: "Liverpool", nation: "Egypt" }, { name: "Yamal", rating: 86, club: "Barcelona", nation: "Spain" }, { name: "Foden", rating: 88, club: "Man City", nation: "England" }, { name: "Raphinha", rating: 84, club: "Barcelona", nation: "Brazil" }]
+        };
+
+        const tacticalPositions = ["LW", "ST", "RW", "LM", "CM", "CM", "RM", "CB", "CB", "CB", "GK"];
+        
+        let p1Name = "اللاعب 1"; let p2Name = "اللاعب 2";
+        let currentRound = 0; let currentPlayer = 1; let currentPresentedPlayer = null;
+        let p1BaseScore = 0; let p2BaseScore = 0; let p1Chemistry = 0; let p2Chemistry = 0;
+        let p1Lineup = []; let p2Lineup = []; let hasRejectedThisTurn = false; let usedPlayers = [];
+        let p1Captain = null; let p2Captain = null;
+        let stats = { p1Poss: 50, p2Poss: 50 };
+
+        function initGameSession() {
+            let input1 = document.getElementById("input-p1-name").value.trim();
+            let input2 = document.getElementById("input-p2-name").value.trim();
+            p1Name = input1 !== "" ? input1 : "اللاعب 1";
+            p2Name = input2 !== "" ? input2 : "اللاعب 2";
+            localStorage.setItem('p1Name', p1Name); localStorage.setItem('p2Name', p2Name);
+
+            document.getElementById("title-p1").innerText = p1Name; document.getElementById("title-p2").innerText = p2Name;
+            document.getElementById("score-name-p1").innerText = p1Name; document.getElementById("score-name-p2").innerText = p2Name;
+            document.getElementById("stat-name-p1").innerText = p1Name; document.getElementById("stat-name-p2").innerText = p2Name;
+            
+            document.getElementById("overlay-title-p1").innerText = `ينتظر دوره...`;
+            document.getElementById("overlay-title-p2").innerText = `ينتظر دوره...`;
+
+            document.getElementById("start-screen").style.display = "none";
+            document.getElementById("stats-screen").style.display = "none";
+            startDraft();
+        }
+
+        // تم إصلاح دالة السحب لتجنب أي تكرار
+        function getRandomPlayer(pos) {
+            const list = playersDatabase[pos];
+            const available = list.filter(p => !usedPlayers.includes(p.name));
+            if(available.length === 0) return list[0]; 
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function calculateChemistry(lineup) {
+            let chem = 0;
+            for(let i = 0; i < lineup.length; i++) {
+                for(let j = i + 1; j < lineup.length; j++) {
+                    if(lineup[i].club === lineup[j].club) chem += 3;
+                    if(lineup[i].nation === lineup[j].nation) chem += 3;
+                }
+            }
+            return Math.min(chem, 33);
+        }
+
+        function renderPitchUI(playerId, lineup) {
+            tacticalPositions.forEach((pos, index) => {
+                const slot = document.getElementById(`p${playerId}-slot-${index}`);
+                slot.className = "pitch-player-slot"; slot.innerHTML = pos;
+            });
+            lineup.forEach((player, index) => {
+                const slot = document.getElementById(`p${playerId}-slot-${index}`);
+                let isCap = (playerId === 1 && p1Captain && p1Captain.name === player.name) || (playerId === 2 && p2Captain && p2Captain.name === player.name);
+                slot.className = "pitch-player-slot filled" + (isCap ? " captain-slot" : "");
+                slot.innerHTML = `<div class="p-name">${isCap ? '👑 ' : ''}${player.name}</div><div class="p-rat">${player.rating}</div>`;
+            });
+        }
+
+        function updateTurnUI() {
+            document.getElementById("reveal-p1").style.display = "none";
+            document.getElementById("reveal-p2").style.display = "none";
+
+            if (currentRound >= tacticalPositions.length) {
+                initCaptainSelection(1);
+                return;
+            }
+
+            let currentPos = tacticalPositions[currentRound];
+            let activeId = currentPlayer; let idleId = currentPlayer === 1 ? 2 : 1;
+
+            document.getElementById(`overlay-p${activeId}`).style.display = "none";
+            document.getElementById(`overlay-p${idleId}`).style.display = "flex";
+            document.getElementById(`title-p${activeId}`).className = "active-turn";
+            document.getElementById(`title-p${idleId}`).className = "";
+            document.getElementById(`accept-p${activeId}`).disabled = false;
+            document.getElementById(`reject-p${activeId}`).style.display = "block";
+            
+            currentPresentedPlayer = getRandomPlayer(currentPos);
+            document.getElementById(`name-p${activeId}`).innerText = currentPresentedPlayer.name;
+            document.getElementById(`rating-p${activeId}`).innerText = currentPresentedPlayer.rating;
+            document.getElementById(`pos-p${activeId}`).innerText = currentPos;
+            document.getElementById(`meta-p${activeId}`).innerText = `${currentPresentedPlayer.club} | ${currentPresentedPlayer.nation}`;
+
+            renderPitchUI(1, p1Lineup); renderPitchUI(2, p2Lineup);
+            hasRejectedThisTurn = false;
+        }
+
+        function acceptPlayer() {
+            let pos = tacticalPositions[currentRound];
+            let p = { ...currentPresentedPlayer, pos: pos };
+            usedPlayers.push(p.name); 
+
+            let activeId = currentPlayer;
+
+            if (currentPlayer === 1) {
+                p1BaseScore += p.rating; p1Lineup.push(p); p1Chemistry = calculateChemistry(p1Lineup);
+                document.getElementById("score-p1").innerText = p1BaseScore; document.getElementById("chem-p1").innerText = `+${p1Chemistry}`;
+                currentPlayer = 2; 
+            } else {
+                p2BaseScore += p.rating; p2Lineup.push(p); p2Chemistry = calculateChemistry(p2Lineup);
+                document.getElementById("score-p2").innerText = p2BaseScore; document.getElementById("chem-p2").innerText = `+${p2Chemistry}`;
+                currentPlayer = 1; currentRound++;    
+            }
+
+            if (!hasRejectedThisTurn) {
+                document.getElementById(`accept-p${activeId}`).disabled = true;
+                document.getElementById(`reject-p${activeId}`).style.display = "none";
+
+                let alt = getRandomPlayer(pos); 
+                const reveal = document.getElementById(`reveal-p${activeId}`);
+                reveal.style.display = "block";
+
+                if (p.rating >= alt.rating) {
+                    reveal.className = "reveal-box box-good"; reveal.innerHTML = `🔥 قرار سليم! البديل: <b>${alt.name} (${alt.rating})</b>`;
+                } else {
+                    reveal.className = "reveal-box box-bad"; reveal.innerHTML = `⚠️ ضيعت فرصة! البديل: <b>${alt.name} (${alt.rating})</b>`;
+                }
+                setTimeout(updateTurnUI, 1200); 
+            } else {
+                updateTurnUI();
+            }
+        }
+
+        function rejectPlayer() {
+            if (hasRejectedThisTurn) return;
+            let pos = tacticalPositions[currentRound];
+            usedPlayers.push(currentPresentedPlayer.name); 
+
+            let activeId = currentPlayer;
+            let newP = getRandomPlayer(pos);
+            
+            currentPresentedPlayer = newP;
+            document.getElementById(`name-p${activeId}`).innerText = newP.name;
+            document.getElementById(`rating-p${activeId}`).innerText = newP.rating;
+            document.getElementById(`meta-p${activeId}`).innerText = `${newP.club} | ${newP.nation}`;
+            
+            hasRejectedThisTurn = true;
+            document.getElementById(`reject-p${activeId}`).style.display = "none";
+        }
+
+        function initCaptainSelection(pId) {
+            const screen = document.getElementById("captain-screen");
+            const box = document.getElementById("captain-options-box");
+            let pName = pId === 1 ? p1Name : p2Name;
+            document.getElementById("cap-screen-title").innerText = `كابتن فريق ${pName}`;
+            screen.style.display = "flex"; box.innerHTML = "";
+
+            let lineup = pId === 1 ? p1Lineup : p2Lineup;
+            let topPlayers = [...lineup].sort((a,b) => b.rating - a.rating).slice(0, 4);
+
+            topPlayers.forEach(p => {
+                let btn = document.createElement("button");
+                btn.className = "captain-opt"; 
+                btn.innerHTML = `${p.name}<br><span style="color:var(--gold);font-size:1.1rem;">${p.rating}</span>`;
+                btn.onclick = () => {
+                    if(pId === 1) {
+                        p1Captain = p; p.rating += 5; p1BaseScore += 5;
+                        document.getElementById("score-p1").innerText = p1BaseScore;
+                        renderPitchUI(1, p1Lineup); initCaptainSelection(2);
+                    } else {
+                        p2Captain = p; p.rating += 5; p2BaseScore += 5;
+                        document.getElementById("score-p2").innerText = p2BaseScore;
+                        renderPitchUI(2, p2Lineup); screen.style.display = "none"; startMatch();
+                    }
+                };
+                box.appendChild(btn);
+            });
+        }
+
+        function startMatch() {
+            const screen = document.getElementById("match-screen");
+            const log = document.getElementById("match-events-log");
+            
+            screen.style.display = "flex"; log.innerHTML = "";
+            let score1 = 0; let score2 = 0; let minute = 0;
+            let fp1 = p1BaseScore + p1Chemistry; let fp2 = p2BaseScore + p2Chemistry;
+
+            log.innerHTML = `<div class="log-line system">⚽ انطلاق المباراة! قوة الفريقين: ${fp1} ضد ${fp2}</div>`;
+
+            let goals = {}; let matchEvents = [];
+            for(let i=0; i<5; i++) {
+                let min = Math.floor(Math.random() * 85) + 5;
+                if(Math.random() * fp1 > Math.random() * fp2) matchEvents.push({m: min, team: 1});
+                else matchEvents.push({m: min, team: 2});
+            }
+            matchEvents.forEach(e => { goals[e.m] = e.team; });
+
+            let interval = setInterval(() => {
+                minute += 3;
+                document.getElementById("live-timer").innerText = `د '${minute}`;
+
+                stats.p1Poss = Math.round((fp1 / (fp1 + fp2)) * 100) + Math.floor(Math.random() * 10 - 5);
+                stats.p1Poss = Math.max(35, Math.min(65, stats.p1Poss));
+                stats.p2Poss = 100 - stats.p1Poss;
+                document.getElementById("dom-p1").style.width = `${stats.p1Poss}%`;
+                document.getElementById("dom-p2").style.width = `${stats.p2Poss}%`;
+                document.getElementById("dom-text").innerText = `الاستحواذ: ${stats.p1Poss}% - ${stats.p2Poss}%`;
+
+                if(goals[minute] || goals[minute-1] || goals[minute-2]) {
+                    let team = goals[minute] || goals[minute-1] || goals[minute-2];
+                    if(team === 1) {
+                        score1++; let scorer = p1Lineup[Math.floor(Math.random()*p1Lineup.length)].name;
+                        log.innerHTML += `<div class="log-line goal">🔥 جووول! ${scorer} يسجل لـ ${p1Name} (د${minute})</div>`;
+                    } else {
+                        score2++; let scorer = p2Lineup[Math.floor(Math.random()*p2Lineup.length)].name;
+                        log.innerHTML += `<div class="log-line goal">🔥 جووول! ${scorer} يسجل لـ ${p2Name} (د${minute})</div>`;
+                    }
+                    document.getElementById("live-score").innerText = `${score1} - ${score2}`;
+                    log.scrollTop = log.scrollHeight;
+                }
+
+                if(minute >= 90) {
+                    clearInterval(interval);
+                    log.innerHTML += `<div class="log-line system">🏁 انتهت المباراة بنتيجة ${score1} - ${score2}</div>`;
+                    log.scrollTop = log.scrollHeight;
+                    setTimeout(() => showStats(score1, score2, fp1, fp2), 2500);
+                }
+            }, 150);
+        }
+
+        function showStats(score1, score2, fp1, fp2) {
+            document.getElementById("match-screen").style.display = "none";
+            document.getElementById("stats-screen").style.display = "flex";
+
+            let motm = "";
+            if(score1 > score2) motm = [...p1Lineup].sort((a,b)=>b.rating - a.rating)[0].name;
+            else if(score2 > score1) motm = [...p2Lineup].sort((a,b)=>b.rating - a.rating)[0].name;
+            else motm = (fp1 > fp2 ? p1Captain.name : p2Captain.name);
+            
+            document.getElementById("motm-name").innerText = motm;
+
+            let shots1 = score1 + Math.floor(Math.random() * 6);
+            let shots2 = score2 + Math.floor(Math.random() * 6);
+            let pass1 = 75 + Math.floor(Math.random() * 20);
+            let pass2 = 75 + Math.floor(Math.random() * 20);
+
+            document.getElementById("stat-shots-p1").innerText = shots1;
+            document.getElementById("stat-shots-p2").innerText = shots2;
+            document.getElementById("stat-pass-p1").innerText = pass1 + "%";
+            document.getElementById("stat-pass-p2").innerText = pass2 + "%";
+        }
+
+        function startDraft() {
+            currentRound = 0; currentPlayer = 1; p1BaseScore = 0; p2BaseScore = 0; p1Chemistry = 0; p2Chemistry = 0;
+            p1Lineup = []; p2Lineup = []; usedPlayers = []; p1Captain = null; p2Captain = null;
+            
+            document.getElementById("score-p1").innerText = "0"; document.getElementById("chem-p1").innerText = "0";
+            document.getElementById("score-p2").innerText = "0"; document.getElementById("chem-p2").innerText = "0";
+            document.getElementById("live-score").innerText = "0 - 0";
+            
+            renderPitchUI(1, []); renderPitchUI(2, []); updateTurnUI();
+        }
+
+        function resetGame() {
+            document.getElementById("stats-screen").style.display = "none";
+            document.getElementById("start-screen").style.display = "flex";
+        }
+    </script>
+</body>
+</html>
