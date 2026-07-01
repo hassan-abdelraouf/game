@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#000000">
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>تحدي الأساطير - نسخة الموبايل برو</title>
@@ -87,9 +84,16 @@
         .pitch-player-slot {
             width: 48px; height: 34px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); 
             border: 1px dashed rgba(255, 255, 255, 0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 0.6rem; color: rgba(255, 255, 255, 0.6); font-weight: bold; overflow: hidden; transition: 0.3s;
+            cursor: pointer;
         }
         .pitch-player-slot.filled { background: linear-gradient(135deg, #fbbf24, #d97706); color: #000; border: none; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
         .pitch-player-slot.captain-slot { box-shadow: 0 0 15px var(--gold); border: 2px solid #fff; }
+        
+        /* تأثير تحديد اللاعب للتبديل */
+        .pitch-player-slot.selected-swap {
+            box-shadow: 0 0 20px #10b981; border: 2px solid #10b981; transform: scale(1.1); z-index: 10; animation: pulse 1.5s infinite;
+        }
+
         .pitch-player-slot .p-name { font-size: 0.55rem; font-weight: 900; white-space: nowrap; max-width: 44px; overflow: hidden; text-overflow: ellipsis; }
         .pitch-player-slot .p-rat { font-size: 0.55rem; background: rgba(0,0,0,0.8); color: var(--gold); padding: 1px 4px; border-radius: 4px; margin-top: 2px; }
 
@@ -137,7 +141,6 @@
         }
         .captain-opt:active { transform: scale(0.95); background: var(--gold); color: #000; }
 
-        /* تعديلات واجهة المباراة للإصلاح */
         #match-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); z-index: 20; display: none; flex-direction: column; padding: 20px 15px; box-sizing: border-box;
@@ -158,10 +161,10 @@
         #dom-p1 { width: 50%; background: linear-gradient(90deg, #2563eb, #60a5fa); transition: width 0.3s ease; }
         #dom-p2 { width: 50%; background: linear-gradient(90deg, #f472b6, #db2777); transition: width 0.3s ease; }
 
-        /* إصلاح صندوق الأحداث (التمرير السلس) */
         .match-log-box { 
-            flex: 1; min-height: 0; /* هذا السطر يمنع الصندوق من تجاوز الشاشة */
-            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; overflow-y: auto; font-size: 0.85rem; line-height: 1.8; text-align: right; margin-bottom: 15px; 
+            flex: 1; min-height: 0; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); 
+            border-radius: 16px; padding: 15px; overflow-y: auto; font-size: 0.85rem; line-height: 1.8; 
+            text-align: right; margin-bottom: 15px; 
         }
         .log-line { padding: 8px 12px; border-radius: 10px; margin-bottom: 10px; background: rgba(255,255,255,0.03); border-right: 4px solid transparent; animation: slideUp 0.3s ease-out; }
         .log-line.goal { background: rgba(16, 185, 129, 0.15); border-right-color: var(--primary); color: #6ee7b7; font-weight: 800; }
@@ -293,14 +296,18 @@
     </div>
 
     <script>
+        // المتغيرات الجديدة الخاصة بالتبديل
+        let selectedSwapIndex = null;
+        let activeSwapTeam = null;
+
+        const savedP1 = localStorage.getItem('p1Name');
+        const savedP2 = localStorage.getItem('p2Name');
+
         window.onload = () => {
-            const savedP1 = localStorage.getItem('p1Name');
-            const savedP2 = localStorage.getItem('p2Name');
             if(savedP1) document.getElementById('input-p1-name').value = savedP1;
             if(savedP2) document.getElementById('input-p2-name').value = savedP2;
         };
 
-        // تم إضافة أسماء كثيرة جداً لمنع أي تكرار أو خطأ عند استخدام زر الرفض
         const playersDatabase = {
             "GK": [{ name: "Yashin", rating: 94, club: "Dynamo", nation: "Russia" }, { name: "Casillas", rating: 92, club: "Real Madrid", nation: "Spain" }, { name: "Courtois", rating: 90, club: "Real Madrid", nation: "Belgium" }, { name: "Alisson", rating: 89, club: "Liverpool", nation: "Brazil" }, { name: "Ter Stegen", rating: 89, club: "Barcelona", nation: "Germany" }, { name: "Bounou", rating: 86, club: "Al Hilal", nation: "Morocco" }, { name: "Ederson", rating: 88, club: "Man City", nation: "Brazil" }, { name: "Oblak", rating: 89, club: "Atletico", nation: "Slovenia" }, { name: "Donnarumma", rating: 87, club: "PSG", nation: "Italy" }],
             "CB": [{ name: "Maldini", rating: 94, club: "Milan", nation: "Italy" }, { name: "Nesta", rating: 92, club: "Milan", nation: "Italy" }, { name: "Van Dijk", rating: 91, club: "Liverpool", nation: "Netherlands" }, { name: "Ramos", rating: 89, club: "Sevilla", nation: "Spain" }, { name: "Rüdiger", rating: 88, club: "Real Madrid", nation: "Germany" }, { name: "Saliba", rating: 87, club: "Arsenal", nation: "France" }, { name: "Araujo", rating: 86, club: "Barcelona", nation: "Uruguay" }, { name: "Dias", rating: 89, club: "Man City", nation: "Portugal" }, { name: "Marquinhos", rating: 87, club: "PSG", nation: "Brazil" }, { name: "Kompany", rating: 89, club: "Man City", nation: "Belgium" }, { name: "Puyol", rating: 90, club: "Barcelona", nation: "Spain" }, { name: "Koulibaly", rating: 85, club: "Al Hilal", nation: "Senegal" }, { name: "Militao", rating: 86, club: "Real Madrid", nation: "Brazil" }, { name: "Stones", rating: 85, club: "Man City", nation: "England" }],
@@ -340,7 +347,6 @@
             startDraft();
         }
 
-        // تم إصلاح دالة السحب لتجنب أي تكرار
         function getRandomPlayer(pos) {
             const list = playersDatabase[pos];
             const available = list.filter(p => !usedPlayers.includes(p.name));
@@ -359,11 +365,41 @@
             return Math.min(chem, 33);
         }
 
+        // دالة التبديل عند الضغط
+        function handleSlotClick(playerId, index) {
+            let lineup = playerId === 1 ? p1Lineup : p2Lineup;
+            if (!lineup[index]) return; // إذا الخانة فارغة
+
+            if (selectedSwapIndex === null) {
+                selectedSwapIndex = index;
+                activeSwapTeam = playerId;
+                document.getElementById(`p${playerId}-slot-${index}`).classList.add('selected-swap');
+            } else {
+                if (activeSwapTeam !== playerId || selectedSwapIndex === index) {
+                    document.getElementById(`p${activeSwapTeam}-slot-${selectedSwapIndex}`).classList.remove('selected-swap');
+                    selectedSwapIndex = null;
+                    return;
+                }
+
+                let temp = lineup[selectedSwapIndex];
+                lineup[selectedSwapIndex] = lineup[index];
+                lineup[index] = temp;
+
+                renderPitchUI(playerId, lineup);
+                selectedSwapIndex = null;
+                activeSwapTeam = null;
+            }
+        }
+
+        // دالة عرض الملعب (محدثة)
         function renderPitchUI(playerId, lineup) {
             tacticalPositions.forEach((pos, index) => {
                 const slot = document.getElementById(`p${playerId}-slot-${index}`);
-                slot.className = "pitch-player-slot"; slot.innerHTML = pos;
+                slot.className = "pitch-player-slot"; 
+                slot.innerHTML = pos;
+                slot.onclick = () => handleSlotClick(playerId, index); // إضافة حدث الضغط
             });
+            
             lineup.forEach((player, index) => {
                 const slot = document.getElementById(`p${playerId}-slot-${index}`);
                 let isCap = (playerId === 1 && p1Captain && p1Captain.name === player.name) || (playerId === 2 && p2Captain && p2Captain.name === player.name);
@@ -375,6 +411,12 @@
         function updateTurnUI() {
             document.getElementById("reveal-p1").style.display = "none";
             document.getElementById("reveal-p2").style.display = "none";
+
+            // إزالة أي تحديدات تبديل باقية عند بدء دور جديد
+            if (selectedSwapIndex !== null && activeSwapTeam !== null) {
+                document.getElementById(`p${activeSwapTeam}-slot-${selectedSwapIndex}`).classList.remove('selected-swap');
+                selectedSwapIndex = null; activeSwapTeam = null;
+            }
 
             if (currentRound >= tacticalPositions.length) {
                 initCaptainSelection(1);
@@ -559,6 +601,7 @@
         function startDraft() {
             currentRound = 0; currentPlayer = 1; p1BaseScore = 0; p2BaseScore = 0; p1Chemistry = 0; p2Chemistry = 0;
             p1Lineup = []; p2Lineup = []; usedPlayers = []; p1Captain = null; p2Captain = null;
+            selectedSwapIndex = null; activeSwapTeam = null;
             
             document.getElementById("score-p1").innerText = "0"; document.getElementById("chem-p1").innerText = "0";
             document.getElementById("score-p2").innerText = "0"; document.getElementById("chem-p2").innerText = "0";
